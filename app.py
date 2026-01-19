@@ -1,48 +1,47 @@
 import streamlit as st
 import google.generativeai as genai
 
-# १. एपको सेटअप र डिजाइन
+# १. एपको सेटअप (Design)
 st.set_page_config(page_title="हेमन्तको Personal AI", layout="centered")
 st.title("🤖 हेमन्तको Personal AI (Master Memory)")
 
-# २. Streamlit Secrets बाट सुरक्षित रूपमा साँचो तान्ने
+# २. सुरक्षित तरिकाले साँचो तान्ने (Secrets बाट)
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=API_KEY)
 except Exception:
-    st.error("ओए हेमन्त, Streamlit 'Settings > Secrets' मा गएर साँचो हाल मुजी!")
+    st.error("हेमन्त, Streamlit Settings मा गएर 'Secrets' मा साँचो हाल मुजी!")
     st.stop()
 
-# ३. एआई मोडल सेटिङ (Gemini 1.5 Flash - छिटो र स्मार्ट)
+# ३. एआई मोडल सेटिङ (Gemini 1.5 Flash)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# ४. "Strong Memory" सिस्टम (Cloud Session)
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ४. बलियो मेमोरी (Memory System)
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # ५. पुराना गफहरू स्क्रिनमा देखाउने
-for message in st.session_state.messages:
+for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
 # ६. गफगाफ सुरु
 if prompt := st.chat_input("के छ खबर हेमन्त?"):
-    # प्रयोगकर्ताको म्यासेज सेभ गर्ने
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # हेमन्तको म्यासेज सेभ गर्ने
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
     with st.chat_message("assistant"):
         try:
-            # एआईलाई दिइने कडा निर्देशन (Instructions)
-            instruction = "तपाईं हेमन्तको सबैभन्दा मिल्ने र भरपर्दो साथी हो। हेमन्तको बारेमा सबै कुरा याद राख्नुहोस्। जहिले पनि रमाइलो र ठेट नेपालीमा जवाफ दिनुहोस्।"
+            # एआईलाई पुराना गफ सम्झाउने प्रोम्प्ट
+            history_context = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.chat_history[-10:]])
             
-            # पुराना गफको सन्दर्भ (Context) सहित जवाफ माग्ने
-            response = model.generate_content(f"{instruction} पुराना गफहरू: {st.session_state.messages[-5:]}. अहिलेको प्रश्न: {prompt}")
+            response = model.generate_content(f"तपाईं हेमन्तको मिल्ने साथी हो। यो पुरानो गफको आधारमा नेपालीमा उत्तर दिनुहोस्: {history_context}")
             
-            msg = response.text
-            st.write(msg)
+            full_response = response.text
+            st.write(full_response)
             # एआईको जवाफ पनि मेमोरीमा सेभ गर्ने
-            st.session_state.messages.append({"role": "assistant", "content": msg})
+            st.session_state.chat_history.append({"role": "assistant", "content": full_response})
         except Exception:
-            st.error("गुगलको सर्भर व्यस्त भयो, १ मिनेट पछि रिफ्रेस गर!")
+            st.error("गुगलको सर्भरमा जाम भयो। १ मिनेट पछि रिफ्रेस गर!")
