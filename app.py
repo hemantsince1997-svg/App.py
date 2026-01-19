@@ -1,42 +1,43 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI
+import gspread
+from google.oauth2.service_account import Credentials
 
-# १. एपको नाम र सेटिङ
-st.set_page_config(page_title="हेमन्तको Personal AI", layout="centered")
-st.title("🤖 हेमन्तको Personal AI")
+# १. एआई सेटअप
+st.title("My Personal AI (Cloud Memory)")
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# २. Streamlit Secrets बाट साँचो तान्ने (सुरक्षित तरिका)
-try:
-    API_KEY = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=API_KEY)
-except Exception:
-    st.error("ओए हेमन्त, Streamlit 'Secrets' मा साँचो हाल मुजी!")
-    st.stop()
+# २. गुगल सिट (Cloud) कनेक्ट - यसले गर्दा फोन हराए पनि डाटा बच्छ
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scope)
+gc = gspread.authorize(creds)
+sh = gc.open("MyAIMemory").sheet1 # तेरो गुगल सिटको नाम 'MyAIMemory' हुनुपर्छ
 
-# ३. एआई मोडल सेटअप
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-# ४. मेमोरी (Chat History)
+# ३. च्याट मेमोरी लोड गर्ने
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ५. पुराना गफहरू देखाउने
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.write(message["content"])
+        st.markdown(message["content"])
 
-# ६. म्यासेज पठाउने ठाउँ
-if prompt := st.chat_input("के छ खबर हेमन्त?"):
+# ४. नयाँ म्यासेज र क्लाउड सेभ
+if prompt := st.chat_input("भन के छ?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.write(prompt)
+        st.markdown(prompt)
 
+    # ChatGPT बाट जवाफ लिने (संसारको ज्ञान)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": "You are a best friend who remembers everything."}] + st.session_state.messages
+    )
+    ans = response.choices[0].message.content
+    
     with st.chat_message("assistant"):
-        try:
-            # सिधै उत्तर माग्ने (सफा र छिटो)
-            response = model.generate_content(f"तपाईं हेमन्तको मिल्ने साथी हो। नेपालीमा छोटो जवाफ दिनुहोस्। प्रश्न: {prompt}")
-            msg = response.text
-            st.write(msg)
-            st.session_state.messages.append({"role": "assistant", "content": msg})
-        except Exception:
-            st.error("गुगलले अझै टेरेन मुजी! एकछिन पछि रिफ्रेस गर।")
+        st.markdown(ans)
+    
+    st.session_state.messages.append({"role": "assistant", "content": ans})
+    
+    # क्लाउड (Google Sheet) मा डाटा पठाउने
+    sh.append_row([prompt, ans])
