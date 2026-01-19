@@ -2,15 +2,11 @@ import streamlit as st
 import google.generativeai as genai
 
 st.set_page_config(page_title="हेमन्तको AI", layout="centered")
-st.title("🤖 हेमन्तको Personal AI (Final Pro)")
+st.title("🤖 हेमन्तको Personal AI (Non-Stop)")
 
-# १. सुरक्षित तरिकाले साँचो तान्ने (Secrets बाट)
-try:
-    API_KEY = st.secrets["GOOGLE_API_KEY"]
-    genai.configure(api_key=API_KEY)
-except:
-    st.error("ओए हेमन्त, Streamlit मा गएर साँचो 'Secrets' मा हाल मुजी!")
-    st.stop()
+# यो कोठामा भर्खरै पठाएको नयाँ चाबी हाल मुजी!
+API_KEY = "AIzaSyBiEJMy2ZeTqilGIUQ4k54Q2vpSCONxQ9s"
+genai.configure(api_key=API_KEY)
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
@@ -28,9 +24,9 @@ if prompt := st.chat_input("के छ खबर हेमन्त?"):
 
     with st.chat_message("assistant"):
         try:
-            response = model.generate_content(f"You are Hemant's best friend. Answer in Nepali. Hemant says: {prompt}")
+            response = model.generate_content(f"You are Hemant's best friend. Talk in Nepali. Hemant says: {prompt}")
             msg = response.text
             st.write(msg)
             st.session_state.messages.append({"role": "assistant", "content": msg})
-        except Exception:
-            st.error("गुगलले अझै टेरेन, एकछिन पर्ख!")
+        except:
+            st.error("गुगलले अझै टेरेन, १ घण्टा मोबाइल नचलाई बस अनि रिफ्रेस गर!")
